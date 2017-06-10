@@ -11,7 +11,7 @@
 
 #define GOAL_POSITION 30
 
-#define TIME_SENSOR 10000
+#define TIME_SENSOR 50000
 
 Dynamixel Dxl(DXL_BUS_SERIAL1);
 
@@ -26,10 +26,10 @@ double e2[3] = {};
 HardwareTimer Timer(1);
 
 void setServosPositions(int angle1, int angle2){
-  if(angle1 < -30 || angle1 > 30)
-    return;
-  if(angle2 < -30 || angle2 > 30)
-    return;
+  if(angle1 < -30) angle1 = -30;
+  if(angle1 > 30) angle1 = 30;
+  if(angle2 < -30) angle2 = -30;
+  if(angle2 > 30) angle2 = 30;
 
   int pos1 = angle1 * 1024 / 300 + 0x00000200;
   int pos2 = angle2 * 1024 / 300 + 0x00000200;
@@ -57,8 +57,9 @@ void setServo1Position(int angle){
 }
 
 void setServo2Position(int angle){
-  if(angle < -30 || angle > 30)
+  if(angle < -30 || angle > 30) {    
     return;
+  }
 
   int pos = angle * 1024 / 300 + 0x00000200;
 
@@ -121,8 +122,13 @@ void usbInterrupt(byte* buffer, byte nCount){
 }
 
 void updateBallPosition(int xPos, int yPos){
-  xBallPosition = xPos / PIXELS_LENGTH * TOUCHSCREEN_LENGTH - TOUCHSCREEN_LENGTH / 2;
-  yBallPosition = yPos / PIXELS_WIDTH * TOUCHSCREEN_WIDTH - TOUCHSCREEN_WIDTH / 2;
+  xBallPosition = (1.0)* xPos / PIXELS_LENGTH * TOUCHSCREEN_LENGTH - TOUCHSCREEN_LENGTH / 2;
+  yBallPosition = (1.0)* yPos / PIXELS_WIDTH * TOUCHSCREEN_WIDTH - TOUCHSCREEN_WIDTH / 2;
+ if(xBallPosition > 50 || xBallPosition < -50)
+        toggleLED();
+//   else{
+//     toggleLED();
+//   }
 }
 
 void controlInterrupt(void) {
@@ -133,18 +139,25 @@ void controlInterrupt(void) {
     e2[1] = e2[2];
     e1[2] = 0 - xBallPosition;
     e2[2] = 0 - yBallPosition;
-// Update for the angle
+// Update for the angle of the table
     u1[0] = u1[1];
     u2[0] = u2[1];
     u1[1] = u1[2];
     u2[1] = u2[2];
-    u1[2] = (14.23*e1[2] - 28.43*e1[1] +14.2*e1[0])/1000 + u1[0];
-    u2[2] = (14.23*e2[2] - 28.43*e2[1] +14.2*e2[0])/1000 + u2[0];
-
+    //u1[2] = (14.23*e1[2] - 28.43*e1[1] +14.2*e1[0])/1000 + u1[0];
+    //u2[2] = (14.23*e2[2] - 28.43*e2[1] +14.2*e2[0])/1000 + u2[0];
+    u1[2] = 10*e1[2]/1000;
+    u2[2] = 10*e2[2]/1000;
+    
 // TODO
 // u is the variable of the angle of the table
 // Function to convert the position of the servo to the angle of the table
+    double angle1 = asin(2.5*sin(u1[2]));
+    double angle2 = asin(2.5*sin(u2[2]));
+    //setServosPositions(angle1*180/3.1415926535,angle2*180/3.1415926535);
     setServosPositions(u1[2]*180/3.1415926535,u2[2]*180/3.1415926535);
+    //setServosPositions(10,-3);
+
 }
 
 void setup() {
@@ -155,12 +168,13 @@ void setup() {
 
   SerialUSB.attachInterrupt(usbInterrupt);
 
+  pinMode(BOARD_LED_PIN, OUTPUT);
   Timer.pause();
   Timer.setPeriod(TIME_SENSOR);
 
   Timer.setMode(TIMER_CH1, TIMER_OUTPUT_COMPARE);
   Timer.setCompare(TIMER_CH1, 1);
-  Timer.attachInterrupt(TIMER_CH1, control_interrupt);
+  Timer.attachInterrupt(TIMER_CH1, controlInterrupt);
 
   Timer.refresh();
   Timer.resume();
@@ -168,8 +182,5 @@ void setup() {
 
 
 void loop() {
-  // do nothing
-  setServo1Position(10);
-  setServo2Position(-10);
-
+  
 }
