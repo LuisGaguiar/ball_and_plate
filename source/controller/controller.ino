@@ -11,10 +11,19 @@
 
 #define GOAL_POSITION 30
 
+#define TIME_SENSOR 10000
+
 Dynamixel Dxl(DXL_BUS_SERIAL1);
 
 double xBallPosition; // (in mm)
 double yBallPosition;
+
+double u1[3] = {};
+double u2[3] = {};
+double e1[3] = {};
+double e2[3] = {};
+
+HardwareTimer Timer(1);
 
 void setServosPositions(int angle1, int angle2){
   if(angle1 < -30 || angle1 > 30)
@@ -43,8 +52,8 @@ void setServo1Position(int angle){
   byte payload[2];
   payload[0] = (byte)(pos & 0x000000ff);
   payload[1] = (byte)((pos & 0x0000ff00)>>8);
-  
-  setServo(1, payload); 
+
+  setServo(1, payload);
 }
 
 void setServo2Position(int angle){
@@ -57,7 +66,7 @@ void setServo2Position(int angle){
   payload[0] = (byte)(pos & 0x000000ff);
   payload[1] = (byte)((pos & 0x0000ff00)>>8);
 
-  setServo(2, payload); 
+  setServo(2, payload);
 }
 
 void setServo(byte id, byte* buffer){
@@ -116,6 +125,28 @@ void updateBallPosition(int xPos, int yPos){
   yBallPosition = yPos / PIXELS_WIDTH * TOUCHSCREEN_WIDTH - TOUCHSCREEN_WIDTH / 2;
 }
 
+void controlInterrupt(void) {
+// Update for the error
+    e1[0] = e1[1];
+    e2[0] = e2[1];
+    e1[1] = e1[2];
+    e2[1] = e2[2];
+    e1[2] = 0 - xBallPosition;
+    e2[2] = 0 - yBallPosition;
+// Update for the angle
+    u1[0] = u1[1];
+    u2[0] = u2[1];
+    u1[1] = u1[2];
+    u2[1] = u2[2];
+    u1[2] = (14.23*e1[2] - 28.43*e1[1] +14.2*e1[0])/1000 + u1[0];
+    u2[2] = (14.23*e2[2] - 28.43*e2[1] +14.2*e2[0])/1000 + u2[0];
+
+// TODO
+// u is the variable of the angle of the table
+// Function to convert the position of the servo to the angle of the table
+    setServosPositions(u1[2]*180/3.1415926535,u2[2]*180/3.1415926535);
+}
+
 void setup() {
   // put your setup code here, to run once:
   Dxl.begin(3);
@@ -123,9 +154,22 @@ void setup() {
     Dxl.jointMode(id); // jointMod() is to use position mode
 
   SerialUSB.attachInterrupt(usbInterrupt);
+
+  Timer.pause();
+  Timer.setPeriod(TIME_SENSOR);
+
+  Timer.setMode(TIMER_CH1, TIMER_OUTPUT_COMPARE);
+  Timer.setCompare(TIMER_CH1, 1);
+  Timer.attachInterrupt(TIMER_CH1, control_interrupt);
+
+  Timer.refresh();
+  Timer.resume();
 }
+
 
 void loop() {
   // do nothing
+  setServo1Position(10);
+  setServo2Position(-10);
 
 }
