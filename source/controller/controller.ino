@@ -117,8 +117,7 @@ void usbInterrupt(byte* buffer, byte nCount){
   yPositionDetected = (int)buffer[2];
   yPositionDetected <<= 8;
   yPositionDetected |= (int)buffer[3];
-  if(yPositionDetected > 100)
-    toggleLED();
+  toggleLED();
 
   updateBallPosition(xPositionDetected, yPositionDetected);
 }
@@ -144,16 +143,15 @@ void controlInterrupt(void) {
     u2[1] = u2[2];
     //u1[2] = (14.23*e1[2] - 28.43*e1[1] +14.2*e1[0])/1000 + u1[0];
     //u2[2] = (14.23*e2[2] - 28.43*e2[1] +14.2*e2[0])/1000 + u2[0];
-    u1[2] = 10*e1[2]/1000;
-    u2[2] = 10*e2[2]/1000;
+    u1[2] = 5*e1[2]/1000;
+    u2[2] = 5*e2[2]/1000;
     
-// TODO
 // u is the variable of the angle of the table
 // Function to convert the position of the servo to the angle of the table
-    double angle1 = asin(2.5*sin(u1[2]));
-    double angle2 = asin(2.5*sin(u2[2]));
-    //setServosPositions(angle1*180/3.1415926535,angle2*180/3.1415926535);
-    setServosPositions(u1[2]*180/3.1415926535,u2[2]*180/3.1415926535);
+    double angle1 = 2.5*u1[2];
+    double angle2 = -2.5*u2[2];
+    setServosPositions(angle1*180/3.1415926535,angle2*180/3.1415926535);
+    //setServosPositions(u1[2]*180/3.1415926535,u2[2]*180/3.1415926535);
     //setServosPositions(10,-3);
 
 }
