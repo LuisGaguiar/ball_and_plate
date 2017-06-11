@@ -7,7 +7,7 @@
 #define PIXELS_LENGTH 800
 #define PIXELS_WIDTH 480
 #define TOUCHSCREEN_LENGTH 150   // (in mm) TO CONFIRM
-#define TOUCHSCREEN_WIDTH 110
+#define TOUCHSCREEN_WIDTH 80
 
 #define GOAL_POSITION 30
 
@@ -114,9 +114,11 @@ void usbInterrupt(byte* buffer, byte nCount){
   xPositionDetected = (int)buffer[0];
   xPositionDetected <<= 8;
   xPositionDetected |= (int)buffer[1];
-  yPositionDetected = (int)buffer[4];
+  yPositionDetected = (int)buffer[2];
   yPositionDetected <<= 8;
-  yPositionDetected |= (int)buffer[5];
+  yPositionDetected |= (int)buffer[3];
+  if(yPositionDetected > 100)
+    toggleLED();
 
   updateBallPosition(xPositionDetected, yPositionDetected);
 }
@@ -124,11 +126,7 @@ void usbInterrupt(byte* buffer, byte nCount){
 void updateBallPosition(int xPos, int yPos){
   xBallPosition = (1.0)* xPos / PIXELS_LENGTH * TOUCHSCREEN_LENGTH - TOUCHSCREEN_LENGTH / 2;
   yBallPosition = (1.0)* yPos / PIXELS_WIDTH * TOUCHSCREEN_WIDTH - TOUCHSCREEN_WIDTH / 2;
- if(xBallPosition > 50 || xBallPosition < -50)
-        toggleLED();
-//   else{
-//     toggleLED();
-//   }
+  
 }
 
 void controlInterrupt(void) {
