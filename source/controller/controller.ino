@@ -22,6 +22,9 @@ double u1[3] = {};
 double u2[3] = {};
 double e1[3] = {};
 double e2[3] = {};
+double integrative1 = 0;
+double integrative2 = 0;
+
 
 HardwareTimer Timer(1);
 
@@ -143,8 +146,15 @@ void controlInterrupt(void) {
     u2[1] = u2[2];
     //u1[2] = (14.23*e1[2] - 28.43*e1[1] +14.2*e1[0])/1000 + u1[0];
     //u2[2] = (14.23*e2[2] - 28.43*e2[1] +14.2*e2[0])/1000 + u2[0];
-    u1[2] = 2.5*e1[2]/1000;
-    u2[2] = 2.5*e2[2]/1000;
+    integrative1 += 0.1*e1[2];
+    integrative2 += 0.1*e2[2];
+    if(integrative1 < -10) integrative1 = -10;
+    if(integrative1 > 10) integrative1 = 10;
+    if(integrative2 < -10) integrative2 = -10;
+    if(integrative2 > 10) integrative2 = 10;
+      
+    u1[2] = 1.5*e1[2]/1000 + integrative1/1000;
+    u2[2] = 1.5*e2[2]/1000 + integrative2/1000;
     
 // u is the variable of the angle of the table
 // Function to convert the position of the servo to the angle of the table
