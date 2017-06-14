@@ -20,8 +20,6 @@ double yBallPosition=0, yBallLastPosition=0;
 double xVelocity=0, xLastVelocity=0;
 double yVelocity=0, yLastVelocity=0;
 double xFilteredVelocity=0, yFilteredVelocity=0;
-int noSensingSteps = 0;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
 double u1[3] = {};
 double u2[3] = {};
 double e1[3] = {};
@@ -116,7 +114,6 @@ void usbInterrupt(byte* buffer, byte nCount){
     //SerialUSB.println("data is corrupt!");
     return; // data is corrupt
   }
-  noSensingSteps = 0;
   int xPositionDetected, yPositionDetected;
   xPositionDetected = (int)buffer[0];
   xPositionDetected <<= 8;
@@ -152,34 +149,28 @@ void filtering(){
 void controlInterrupt(void) {
 // Update for the error
     filtering();
-    e1[0] = e1[1];
-    e2[0] = e2[1];
-    e1[1] = e1[2];
-    e2[1] = e2[2];
     e1[2] = 0 - (5 * xFilteredVelocity * TIME_SENSOR / 1e6 + xBallPosition);
-    e2[2] = 0 - (5 * yFilteredVelocity * TIME_SENSOR / 1e6 + yBallPosition);;
+    e2[2] = 0 - (5 * yFilteredVelocity * TIME_SENSOR / 1e6 + yBallPosition);
 // Update for the angle of the table
-    u1[0] = u1[1];
-    u2[0] = u2[1];
-    u1[1] = u1[2];
-    u2[1] = u2[2];
+    //Control using MATLAB simulation
     //u1[2] = (14.23*e1[2] - 28.43*e1[1] +14.2*e1[0])/1000 + u1[0];
     //u2[2] = (14.23*e2[2] - 28.43*e2[1] +14.2*e2[0])/1000 + u2[0];
     //Bypassing integrative
-    integrative1 += 0.0*e1[2];
-    integrative2 += 0.0*e2[2];
+    //integrative1 += 0.0*e1[2];
+    //integrative2 += 0.0*e2[2];
     //integrative1 += 0.1*e1[2];
     //integrative2 += 0.1*e2[2];
-    if(integrative1 < -10) integrative1 = -10;
-    if(integrative1 > 10) integrative1 = 10;
-    if(integrative2 < -10) integrative2 = -10;
-    if(integrative2 > 10) integrative2 = 10;
-      
-    u1[2] = 1.5*e1[2]/1000 + integrative1/1000;
-    u2[2] = 1.5*e2[2]/1000 + integrative2/1000;
+    //if(integrative1 < -10) integrative1 = -10;
+    //if(integrative1 > 10) integrative1 = 10;
+    //if(integrative2 < -10) integrative2 = -10;
+    //if(integrative2 > 10) integrative2 = 10;
+    
+    //Control predicting the position 5 times after  
+    u1[2] = 1.5*e1[2]/1000;
+    u2[2] = 1.5*e2[2]/1000;
     
 // u is the variable of the angle of the table
-// Function to convert the position of the servo to the angle of the table
+// Relation between the position of the servo and the angle of the table
     double angle1 = 2.5*u1[2];
     double angle2 = -2.5*u2[2];
     setServosPositions(angle1*180/3.1415926535,angle2*180/3.1415926535);
@@ -197,6 +188,8 @@ void setup() {
   SerialUSB.attachInterrupt(usbInterrupt);
 
   pinMode(BOARD_LED_PIN, OUTPUT);
+
+//Interrupt Timer
   Timer.pause();
   Timer.setPeriod(TIME_SENSOR);
 
