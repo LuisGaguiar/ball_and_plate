@@ -15,8 +15,12 @@
 
 Dynamixel Dxl(DXL_BUS_SERIAL1);
                              
-double xBallPosition; // (in mm)
-double yBallPosition;
+double xBallPosition=0, xBallLastPosition=0; // (in mm)
+double yBallPosition=0, yBallLastPosition=0;
+double xVelocity=0, xLastVelocity=0;
+double yVelocity=0, yLastVelocity=0;
+double xFilteredVelocity=0, yFilteredVelocity=0;
+int noSensingSteps = 0;
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 double u1[3] = {};
 double u2[3] = {};
@@ -112,7 +116,7 @@ void usbInterrupt(byte* buffer, byte nCount){
     //SerialUSB.println("data is corrupt!");
     return; // data is corrupt
   }
-
+  noSensingSteps = 0;
   int xPositionDetected, yPositionDetected;
   xPositionDetected = (int)buffer[0];
   xPositionDetected <<= 8;
@@ -126,19 +130,34 @@ void usbInterrupt(byte* buffer, byte nCount){
 }
 
 void updateBallPosition(int xPos, int yPos){
+  xBallLastPosition = xBallPosition;
+  yBallLastPosition = yBallPosition;
   xBallPosition = (1.0)* xPos / PIXELS_LENGTH * TOUCHSCREEN_LENGTH - TOUCHSCREEN_LENGTH / 2;
   yBallPosition = (1.0)* yPos / PIXELS_WIDTH * TOUCHSCREEN_WIDTH - TOUCHSCREEN_WIDTH / 2;
   
 }
 
+void filtering(){
+  double a = 0.5307;
+  double b = 0.06146;
+  xLastVelocity = xVelocity; yLastVelocity = yVelocity;
+  xVelocity = (xBallPosition - xBallLastPosition)/0.012;
+  yVelocity = (yBallPosition - yBallLastPosition)/0.012;
+  
+  xFilteredVelocity = a * (xVelocity + xLastVelocity) - b * xFilteredVelocity;
+  yFilteredVelocity = a * (yVelocity + yLastVelocity) - b * yFilteredVelocity;
+  
+}
+
 void controlInterrupt(void) {
 // Update for the error
+    filtering();
     e1[0] = e1[1];
     e2[0] = e2[1];
     e1[1] = e1[2];
     e2[1] = e2[2];
-    e1[2] = 0 - xBallPosition;
-    e2[2] = 0 - yBallPosition;
+    e1[2] = 0 - (5 * xFilteredVelocity * TIME_SENSOR / 1e6 + xBallPosition);
+    e2[2] = 0 - (5 * yFilteredVelocity * TIME_SENSOR / 1e6 + yBallPosition);;
 // Update for the angle of the table
     u1[0] = u1[1];
     u2[0] = u2[1];
@@ -146,8 +165,11 @@ void controlInterrupt(void) {
     u2[1] = u2[2];
     //u1[2] = (14.23*e1[2] - 28.43*e1[1] +14.2*e1[0])/1000 + u1[0];
     //u2[2] = (14.23*e2[2] - 28.43*e2[1] +14.2*e2[0])/1000 + u2[0];
-    integrative1 += 0.1*e1[2];
-    integrative2 += 0.1*e2[2];
+    //Bypassing integrative
+    integrative1 += 0.0*e1[2];
+    integrative2 += 0.0*e2[2];
+    //integrative1 += 0.1*e1[2];
+    //integrative2 += 0.1*e2[2];
     if(integrative1 < -10) integrative1 = -10;
     if(integrative1 > 10) integrative1 = 10;
     if(integrative2 < -10) integrative2 = -10;
